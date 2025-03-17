@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Images</title>
+    <link rel="stylesheet" href="../stylesheets/style.css">
+</head>
+<header>
+    <!-- Logo -->
+    <img src="../images/vkistlogo.png" alt="Logo" class="logo">
+
+    <!-- Các thuộc tính thông tin -->
+    <div class="info">
+        <a href="#">Trang chủ</a>
+        <a href="#">Về VKIST</a>
+        <a href="#">Liên hệ</a>
+    </div>
+</header>
+<body>
+    <!-- Header -->
+    <!-- Main content -->
+    <main>
+        <div style="text-align: center; margin-top: 100px;">
+            <h1>Tải ảnh lên</h1>
+            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data" style="display: none;">
+                <input type="file" id="imageInput" name="files[]" multiple accept=".png, .jpg, .jpeg" directory webkitdirectory>
+            </form>
+            <label for="imageInput" id="chooseFolderButton">Chọn thư mục</label>
+            <button id="uploadButton" type="submit" form="uploadForm" style="display: none;">Tải lên</button>
+            <div id="imagePreview"></div>
+            <button id="reconstructButton" style="display: none;">Dựng mô hình ba chiều</button>
+            <button id="demoButton" style="display: none;">Xem trước</button>
+            <input type="file" id="demoInput" accept=".obj" style="display: none;">
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 IT-VKIST Ứng dụng dựng bối cảnh ba chiều. Bản quyền được bảo vệ.</p>
+    </footer>
+
+    <script src="../javascripts/index.js"></script>
+</body>
+
+</html>

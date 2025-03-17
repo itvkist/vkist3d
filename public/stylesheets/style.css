@@ -1,0 +1,100 @@
+body {
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: #00B7FF;
+}
+
+#chooseFolderButton {
+  padding: 10px 20px;
+  background-color: #007bff; /* Màu nền */
+  color: #fff; /* Màu chữ */
+  border: none;
+  border-radius: 5px; /* Bo viền */
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#reconstructButton {
+  display: block;
+  margin: 20px auto;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#uploadButton {
+  display: block;
+}
+
+#demoButton {
+  display: block;
+  margin: 20px auto;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#chooseFolderButton:hover {
+  background-color: #0056b3; /* Màu nền khi hover */
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #333; /* Màu nền header */
+  padding: 10px 20px; /* Khoảng cách nội dung từ viền */
+  z-index: 1000; /* Đảm bảo header hiển thị trên tất cả các phần khác */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Đổ bóng */
+}
+
+.logo {
+  width: 40px; /* Chiều rộng mong muốn */
+  height: auto; /* Chiều cao sẽ tự động điều chỉnh theo tỉ lệ */
+}
+
+.info {
+  color: #fff; /* Màu chữ của các thuộc tính */
+  font-size: 16px; /* Kích thước chữ của các thuộc tính */
+  font:status-bar;
+  text-decoration: none; /* Loại bỏ gạch chân */
+  margin-left: 80px; /* Khoảng cách giữa các thuộc tính */
+  margin-right: 50px; /* Khoảng cách từ bên phải */
+  white-space: nowrap; /* Ngăn chặn các dòng văn bản bị tràn ra khỏi màn hình */
+  overflow: hidden; /* Ẩn bất kỳ nội dung nào vượt quá phần giao diện của phần tử */
+  text-overflow: ellipsis; /* Hiển thị dấu ba chấm (...) cho các dòng văn bản dài */
+}
+
+.info a {
+  color: #fff; /* Màu chữ của các thông tin */
+  font-size: 16px; /* Kích thước chữ của các thông tin */
+  text-decoration: none; /* Loại bỏ gạch chân */
+  margin-right: 20px; /* Khoảng cách từng thông tin */
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  padding: 20px 0;
+  z-index: -999;
+}
