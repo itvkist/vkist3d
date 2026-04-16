@@ -1,8 +1,16 @@
+set -e
+
 VKIST_3D=$(pwd)  # Store current directory in VKIST_3D
 cd "$VKIST_3D"   # Change to the stored path
 
-#install dependencies for colmap and openMVS
-sudo apt-get update -qq && sudo apt-get install -qq
+# Check CUDA is available before proceeding
+if ! command -v nvcc &> /dev/null; then
+    echo "CUDA Toolkit not found. Please install it before running this script."
+    exit 1
+fi
+
+# Install dependencies for COLMAP and OpenMVS
+sudo apt-get update -qq && sudo apt-get install -qq -y
 sudo apt-get -y install \
      git \
      ninja-build \
@@ -37,46 +45,35 @@ sudo apt-get -y install \
      python3-pip \
      meshlab
 
-cd "$VKIST_3D"/libs
-
-#install CMAKE (v3.28.3)
-sudo cp ./cmake-3.28.3-linux-x86_64.sh /opt/
+# Install CMake (v3.28.3)
+sudo cp "$VKIST_3D/libs/cmake-3.28.3-linux-x86_64.sh" /opt/
 cd /opt/
 sudo chmod +x /opt/cmake-3.28.3-linux-x86_64.sh
-sudo bash /opt/cmake-3.28.3-linux-x86_64.sh #press q then y to accept (path: /opt/cmake-3.28.3-...)
+sudo bash /opt/cmake-3.28.3-linux-x86_64.sh  # Press q then y to accept (path: /opt/cmake-3.28.3-...)
 sudo ln -s /opt/cmake-3.28.3-linux-x86_64/bin/* /usr/local/bin
 
-#move back to libraries folder
-cd "$VKIST_3D"/libs
+# Move back to libraries folder
+cd "$VKIST_3D/libs"
 
-#install openMVS (v2.3.0)
+# Install OpenMVS (v2.3.0)
 
-#Eigen (v3.4.90)
+# Eigen (v3.4.90)
 git clone https://gitlab.com/libeigen/eigen.git
-mkdir eigen_build && cd eigen_build
+mkdir -p "$VKIST_3D/libs/eigen_build" && cd "$VKIST_3D/libs/eigen_build"
 cmake ../eigen
 make -j$(nproc) && sudo make install
-cd "$VKIST_3D"/libs
+cd "$VKIST_3D/libs"
 
-#VCGLib
+# VCGLib
 git clone https://github.com/cdcseacave/VCG.git vcglib
 
-#openMVS (v2.3.0)
+# OpenMVS (v2.3.0)
 git clone --branch v2.3.0 --depth 1 https://github.com/cdcseacave/openMVS.git openMVS
-mkdir openMVS_build && cd openMVS_build
+mkdir -p "$VKIST_3D/libs/openMVS_build" && cd "$VKIST_3D/libs/openMVS_build"
 cmake ../openMVS -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=native -DVCG_ROOT="../vcglib"
-# cmake ../openMVS -DCMAKE_BUILD_TYPE=Release -DVCG_ROOT="../vcglib" -DCGAL_DIR="/usr/include/CGAL"
 make -j$(nproc) && sudo make install
 sudo ln -s /usr/local/bin/OpenMVS/* /usr/local/bin
-cd "$VKIST_3D"/libs
+cd "$VKIST_3D/libs"
 
-#################################
-
-# #Create anaconda environment
-# conda create -n vkist3d python=3.10 -y
-
-# #install colmap (v3.13.0) using conda
-# conda activate vkist3d
-# conda install conda-forge::colmap==3.13.0 -y
-
-# pip install -r requirements.txt
+echo "System dependencies and OpenMVS installed successfully."
+echo "Now run setup_env.sh to create the Conda environment."
