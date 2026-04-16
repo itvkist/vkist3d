@@ -8,7 +8,7 @@
 </head>
 <header>
     <!-- Logo -->
-    <img src="../images/vkistlogo.png" alt="Logo" class="logo">
+    <img src="../assets/vkistlogo.png" alt="Logo" class="logo">
 
     <!-- Các thuộc tính thông tin -->
     <div class="info">
@@ -29,8 +29,10 @@
             <label for="imageInput" id="chooseFolderButton">Chọn thư mục</label>
             <button id="uploadButton" type="submit" form="uploadForm" style="display: none;">Tải lên</button>
             <div id="imagePreview"></div>
-            <button id="reconstructButton" style="display: none;">Dựng mô hình ba chiều</button>
-            <button id="demoButton" style="display: none;">Xem trước</button>
+            <div id="actionButtons">
+                <button id="reconstructButton" style="display: none;">Dựng mô hình ba chiều</button>
+                <button id="demoButton">Xem trước</button>
+            </div>
             <input type="file" id="demoInput" accept=".obj" style="display: none;">
         </div>
     </main>

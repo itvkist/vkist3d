@@ -15,10 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
         imagePreview.innerHTML = '';
 
         // Hiển thị nút "Reconstruct" sau khi người dùng đã chọn hình ảnh
-        reconstructButton.style.display = files.length > 0 ? 'block' : 'none';
-        demoButton.style.display = files.length > 0 ? 'block' : 'none';
+        reconstructButton.style.display = files.length > 0 ? 'inline-block' : 'none';
         uploadButton.style.display = files.length > 0 ? 'inline' : 'none';
-        imagePreview.innerHTML = '<br>';
         // Duyệt qua từng tệp đã chọn và hiển thị hình ảnh
         for (var i = 0; i < files.length; i++) {
             var file = files[i];
@@ -29,8 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 reader.onload = function(e) {
                     var img = document.createElement('img');
                     img.src = e.target.result;
-                    img.style.maxWidth = '200px';
-                    img.style.maxHeight = '200px';
                     imagePreview.appendChild(img);
                 };
 
@@ -67,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    reconstructButton.addEventListener('click', function(event) {
+    reconstructButton.addEventListener('click', function() {
         // Tạo body của yêu cầu POST
         const requestBody = {
             path: imagesPath
