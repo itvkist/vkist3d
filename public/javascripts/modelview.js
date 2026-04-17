@@ -67,12 +67,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var fileParam = urlParams.get('file');
 
     // Load file .mtl tương ứng
-    console.log('../images/' + fileParam + '/model/' + fileParam + '.obj')
-    mtlLoader.load('../images/' + fileParam + '/model/' + fileParam + '.obj.mtl', function(materials) {
+    console.log('../models/' + fileParam + '/' + fileParam + '.obj')
+    mtlLoader.load('../models/' + fileParam + '/material.mtl', function(materials) {
         materials.preload();
         objLoader.setMaterials(materials);
         // Load file .obj tương ứng
-        objLoader.load('../images/' + fileParam + '/model/' + fileParam + '.obj', function(object) {
+        objLoader.load('../models/' + fileParam + '/' + fileParam + '.obj', function(object) {
             scene.add(object);
             vkist = object;
         });

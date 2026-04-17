@@ -157,3 +157,43 @@ def ply2obj(project_path, dense_pc_path):
     shutil.copy(os.path.join(dense_pc_path, 'dense_texture0.png'), os.path.join(project_path, 'model'))
 
     return obj_path
+
+
+def ply2obj_trimesh(project_path, dense_pc_path):
+    """Trimesh-based replacement for ply2obj — no meshlabserver dependency.
+    MTL kept as material.mtl. Texture is copied from dense_texture0.png and
+    the MTL map_Kd is updated to reference it.
+    """
+    import trimesh
+
+    if not os.path.exists(os.path.join(project_path, 'model')):
+        os.makedirs(os.path.join(project_path, 'model'))
+
+    project_name = os.path.basename(project_path)
+    model_dir = os.path.join(project_path, 'model')
+    obj_path = os.path.join(model_dir, project_name + '.obj')
+    mtl_path = os.path.join(model_dir, 'material.mtl')
+    texture_name = 'dense_texture0.png'
+
+    start = time.time()
+    mesh = trimesh.load(os.path.join(dense_pc_path, 'dense_texture.ply'))
+    mesh.export(obj_path)
+    log_step(project_path, 'ply2obj_trimesh', time.time() - start)
+
+    # Remove trimesh's auto-copied texture — we use the original instead
+    trimesh_texture = os.path.join(model_dir, 'material_0.png')
+    if os.path.exists(trimesh_texture):
+        os.remove(trimesh_texture)
+
+    # Copy original texture from dense output
+    shutil.copy(os.path.join(dense_pc_path, texture_name), model_dir)
+
+    # Update MTL: fix texture reference and apply three.js Tr -> d fix
+    with open(mtl_path, 'r') as f:
+        mtl_data = f.read()
+    mtl_data = mtl_data.replace('map_Kd material_0.png', f'map_Kd {texture_name}')
+    mtl_data = mtl_data.replace('Tr', 'd')
+    with open(mtl_path, 'w') as f:
+        f.write(mtl_data)
+
+    return obj_path

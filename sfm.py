@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 from utils.util import (
     feature_extraction, exhaustive_matching, mapping,
@@ -6,6 +7,9 @@ from utils.util import (
     convert_colmap_openMVS, reconstruct_mesh, refine_mesh,
     texture_mesh, ply2obj, log_header, log_step,
 )
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_MODELS_DIR = os.path.join(BASE_DIR, 'public', 'models')
 
 ####################################################################################################
 
@@ -40,10 +44,19 @@ def generate_texture(project_path):
     reconstruct_mesh(project_path, dense_pc_path)
     # refine_mesh(project_path, dense_pc_path)
     texture_mesh(project_path, dense_pc_path)
-    result = ply2obj(project_path, dense_pc_path)
+    obj_path = ply2obj(project_path, dense_pc_path)
 
     log_step(project_path, 'TOTAL mesh & texture', time.time() - start)
-    return result
+
+    # Copy finished model to public/models/<project_id>/
+    project_id = os.path.basename(project_path)
+    public_model_dir = os.path.join(PUBLIC_MODELS_DIR, project_id)
+    if os.path.exists(public_model_dir):
+        shutil.rmtree(public_model_dir)
+    shutil.copytree(os.path.join(project_path, 'model'), public_model_dir)
+    log_step(project_path, 'copy model to public', 0)
+
+    return obj_path
 
 
 def reconstruct(project_path):

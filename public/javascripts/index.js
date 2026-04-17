@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var demoButton = document.getElementById('demoButton');
     var demoInput = document.getElementById('demoInput');
     var uploadButton = document.getElementById('uploadButton');
-    var imagesPath
+    var projectId
 
     // Lắng nghe sự kiện khi người dùng chọn hình ảnh
     imageInput.addEventListener('change', function(event) {
@@ -55,8 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             // Xử lý phản hồi từ máy chủ nếu cần
-            imagesPath = data.message
-            console.log(imagesPath);
+            projectId = data.projectId
+            console.log('Project ID:', projectId);
         })
         .catch(error => {
             console.error('There was a problem with the upload:', error);
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     reconstructButton.addEventListener('click', function() {
         // Tạo body của yêu cầu POST
         const requestBody = {
-            path: imagesPath
+            project_id: projectId
         }
         // Tạo options cho fetch
         const requestOptions = {
