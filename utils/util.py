@@ -1,4 +1,5 @@
 import os
+import pymeshlab
 import shutil
 import subprocess as sp
 import time
@@ -131,7 +132,7 @@ def texture_mesh(project_path, dense_pc_path):
 
 # ── PLY → OBJ ─────────────────────────────────────────────────────────────────
 
-def ply2obj(project_path, dense_pc_path):
+def ply2obj_meshlab(project_path, dense_pc_path):
     if not os.path.exists(os.path.join(project_path, 'model')):
         os.makedirs(os.path.join(project_path, 'model'))
 
@@ -147,93 +148,15 @@ def ply2obj(project_path, dense_pc_path):
     ], capture_output=False, text=True, encoding='utf-8')
     log_step(project_path, 'ply2obj', time.time() - start)
 
-    # Fix mtl file for three.js
-    with open(obj_path + '.mtl', 'r') as f:
-        filedata = f.read()
-    filedata = filedata.replace('Tr', 'd')
-    with open(obj_path + '.mtl', 'w') as f:
-        f.write(filedata)
-
     shutil.copy(os.path.join(dense_pc_path, 'dense_texture0.png'), os.path.join(project_path, 'model'))
 
     return obj_path
 
 
-def ply2obj_trimesh(project_path, dense_pc_path):
-    """Convert OpenMVS dense_texture.ply to OBJ with UV mapping.
-    Reads per-face texcoord from the PLY directly (trimesh drops these),
-    then writes a valid OBJ with vt entries and a material.mtl.
-    """
-    from plyfile import PlyData
-
-    # Normalise path so basename never returns ''
-    project_path = os.path.normpath(project_path)
-    project_name = os.path.basename(project_path)
-    model_dir = os.path.join(project_path, 'model')
-    os.makedirs(model_dir, exist_ok=True)
-
-    obj_path = os.path.join(model_dir, project_name + '.obj')
-    mtl_path = os.path.join(model_dir, 'material.mtl')
-    texture_name = 'dense_texture0.png'
-
-    start = time.time()
-
-    ply = PlyData.read(os.path.join(dense_pc_path, 'dense_texture.ply'))
-    verts = ply['vertex']
-    faces = ply['face']
-
-    with open(obj_path, 'w') as f:
-        f.write('mtllib material.mtl\n')
-
-        # Vertices
-        for v in verts:
-            f.write(f"v {v['x']} {v['y']} {v['z']}\n")
-
-        # Per-face UV coordinates (OpenMVS stores 6 floats per tri: u0,v0,u1,v1,u2,v2)
-        vt_idx = 1
-        face_vt = []
-        for face in faces:
-            tc = face['texcoord']
-            tri = []
-            for i in range(3):
-                # Flip V axis for OBJ convention
-                f.write(f"vt {tc[i * 2]:.6f} {1.0 - tc[i * 2 + 1]:.6f}\n")
-                tri.append(vt_idx)
-                vt_idx += 1
-            face_vt.append(tri)
-
-        # Faces referencing vertex + UV indices (1-based)
-        f.write('usemtl material_0\n')
-        for i, face in enumerate(faces):
-            vi = face['vertex_indices']
-            vt = face_vt[i]
-            f.write(f"f {vi[0]+1}/{vt[0]} {vi[1]+1}/{vt[1]} {vi[2]+1}/{vt[2]}\n")
-
-    log_step(project_path, 'ply2obj', time.time() - start)
-
-    # Copy original texture from dense output
-    shutil.copy(os.path.join(dense_pc_path, texture_name), model_dir)
-
-    # Write MTL
-    with open(mtl_path, 'w') as f:
-        f.write(
-            "newmtl material_0\n"
-            "Ka 1.000000 1.000000 1.000000\n"
-            "Kd 1.000000 1.000000 1.000000\n"
-            "Ks 0.000000 0.000000 0.000000\n"
-            "Ns 0.000000\n"
-            "illum 2\n"
-            f"map_Kd {texture_name}\n"
-        )
-
-    return obj_path
-
-
-def ply2obj_pymeshlab(project_path, dense_pc_path):
+def ply2obj(project_path, dense_pc_path):
     """Convert OpenMVS dense_texture.ply to OBJ using pymeshlab.
     Preserves UV coordinates and texture mapping natively.
     """
-    import pymeshlab
 
     project_path = os.path.normpath(project_path)
     project_name = os.path.basename(project_path)
@@ -242,7 +165,7 @@ def ply2obj_pymeshlab(project_path, dense_pc_path):
 
     ply_path = os.path.join(dense_pc_path, 'dense_texture.ply')
     obj_path = os.path.join(model_dir, project_name + '.obj')
-    mtl_path = os.path.join(model_dir, 'material.mtl')
+    mtl_path = os.path.join(model_dir, obj_path + '.mtl')
     texture_name = 'dense_texture0.png'
 
     start = time.time()
@@ -253,32 +176,16 @@ def ply2obj_pymeshlab(project_path, dense_pc_path):
 
     log_step(project_path, 'ply2obj_pymeshlab', time.time() - start)
 
-    # pymeshlab writes <project_name>.mtl — rename to material.mtl
-    generated_mtl = obj_path.replace('.obj', '.mtl')
-    if os.path.exists(generated_mtl) and generated_mtl != mtl_path:
-        os.rename(generated_mtl, mtl_path)
-
-    # Update mtllib reference inside OBJ to point to material.mtl
-    with open(obj_path, 'r') as f:
-        obj_data = f.read()
-    obj_data = obj_data.replace(
-        f'mtllib {project_name}.mtl', 'mtllib material.mtl'
-    )
-    with open(obj_path, 'w') as f:
-        f.write(obj_data)
-
     # Copy original texture from dense output
     shutil.copy(os.path.join(dense_pc_path, texture_name), model_dir)
 
-    # Fix MTL: point texture at dense_texture0.png, add illum 2, fix Tr -> d
+    # Fix MTL: point texture at dense_texture0.png, add illum 2
     with open(mtl_path, 'r') as f:
         mtl_data = f.read()
-    # Replace whatever texture pymeshlab wrote with the correct filename
-    import re
-    mtl_data = re.sub(r'map_Kd\s+\S+', f'map_Kd {texture_name}', mtl_data)
-    mtl_data = mtl_data.replace('Tr', 'd')
+        
     if 'illum' not in mtl_data:
         mtl_data = mtl_data.replace('map_Kd', 'illum 2\nmap_Kd')
+
     with open(mtl_path, 'w') as f:
         f.write(mtl_data)
 

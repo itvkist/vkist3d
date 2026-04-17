@@ -50,38 +50,25 @@ document.body.appendChild(renderer.domElement);
 
 var mesh;
 
-// Tạo một loader cho file PLY
-var loader = new THREE.PLYLoader();
-
 // Tạo một loader cho texture
 var textureLoader = new THREE.TextureLoader();
 
 var objLoader = new THREE.OBJLoader();
 var mtlLoader = new THREE.MTLLoader();
-var gltfLoader = new THREE.GLTFLoader();
-var vkist;
 
 
 function loadOBJ(modelDir, fileName) {
     mtlLoader.setPath(modelDir + '/');
-    mtlLoader.load('material.mtl', function(materials) {
+    mtlLoader.load(fileName + '.obj.mtl', function(materials) {
         materials.preload();
         objLoader.setMaterials(materials);
         objLoader.load(modelDir + '/' + fileName + '.obj', function(object) {
             scene.add(object);
-            vkist = object;
+            mesh = object;
         });
     });
 }
 
-function loadGLB(glbPath) {
-    gltfLoader.load(glbPath, function(gltf) {
-        scene.add(gltf.scene);
-        vkist = gltf.scene;
-    }, undefined, function(err) {
-        console.error('GLB load error:', err);
-    });
-}
 
 document.addEventListener('DOMContentLoaded', function() {
     var urlParams = new URLSearchParams(window.location.search);
@@ -89,11 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var type      = urlParams.get('type');
     var modelDir  = '../models/' + fileParam;
 
-    if (type === 'glb') {
-        loadGLB(modelDir + '/' + fileParam + '.glb');
-    } else {
-        loadOBJ(modelDir, fileParam);
-    }
+    loadOBJ(modelDir, fileParam);
 });
 
 
@@ -106,7 +89,6 @@ function animate() {
     requestAnimationFrame(animate);
     // Xoay vật thể liên tục
     //mesh.rotation.y += 0.01;
-    //vkist.rotation.y += 0.01;
     renderer.render(scene, camera);
 }
 
