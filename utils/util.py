@@ -126,7 +126,7 @@ def texture_mesh(project_path, dense_pc_path):
         '-m', 'dense_mesh.ply',
         '--resolution-level', '1',
         '--empty-color', '0',
-        '--export-type', 'obj',
+        '--export-type', 'ply',
     ])
 
 
