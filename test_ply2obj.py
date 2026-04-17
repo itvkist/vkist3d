@@ -41,21 +41,28 @@ def check_outputs(project_path, obj_path):
             print(f"    MISSING  {name}: {path}")
             all_ok = False
 
-    # Verify MTL references the correct texture
+    # Verify MTL content
     mtl_path = expected['MTL']
     if os.path.exists(mtl_path):
         with open(mtl_path) as f:
             mtl_data = f.read()
-        if 'map_Kd dense_texture0.png' in mtl_data:
-            print("    OK       MTL texture reference: dense_texture0.png")
-        else:
-            print("    WARN     MTL does not reference dense_texture0.png — check map_Kd line")
-            all_ok = False
+        checks = {
+            'map_Kd dense_texture0.png': 'texture reference',
+            'illum 2':                   'illumination model 2',
+        }
+        for token, label in checks.items():
+            if token in mtl_data:
+                print(f"    OK       MTL {label}")
+            else:
+                print(f"    MISSING  MTL {label} ({token!r} not found)")
+                all_ok = False
 
     # Warn if trimesh's auto-texture was not cleaned up
-    leftover = os.path.join(model_dir, 'material_0.png')
-    if os.path.exists(leftover):
-        print(f"    WARN     Leftover trimesh texture not removed: {leftover}")
+    for leftover in ['material_0.png', 'material.mtl']:
+        path = os.path.join(model_dir, leftover)
+        # material.mtl is expected — only warn about material_0.png
+        if leftover != 'material.mtl' and os.path.exists(path):
+            print(f"    WARN     Leftover trimesh file not removed: {path}")
 
     return all_ok
 

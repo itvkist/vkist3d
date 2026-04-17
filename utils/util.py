@@ -161,8 +161,7 @@ def ply2obj(project_path, dense_pc_path):
 
 def ply2obj_trimesh(project_path, dense_pc_path):
     """Trimesh-based replacement for ply2obj — no meshlabserver dependency.
-    MTL kept as material.mtl. Texture is copied from dense_texture0.png and
-    the MTL map_Kd is updated to reference it.
+    Creates material.mtl manually with dense_texture0.png and illum 2.
     """
     import trimesh
 
@@ -180,20 +179,39 @@ def ply2obj_trimesh(project_path, dense_pc_path):
     mesh.export(obj_path)
     log_step(project_path, 'ply2obj_trimesh', time.time() - start)
 
-    # Remove trimesh's auto-copied texture — we use the original instead
-    trimesh_texture = os.path.join(model_dir, 'material_0.png')
-    if os.path.exists(trimesh_texture):
-        os.remove(trimesh_texture)
+    # Remove any auto-generated files from trimesh
+    for leftover in ['material.mtl', 'material_0.png']:
+        path = os.path.join(model_dir, leftover)
+        if os.path.exists(path):
+            os.remove(path)
 
     # Copy original texture from dense output
     shutil.copy(os.path.join(dense_pc_path, texture_name), model_dir)
 
-    # Update MTL: fix texture reference and apply three.js Tr -> d fix
-    with open(mtl_path, 'r') as f:
-        mtl_data = f.read()
-    mtl_data = mtl_data.replace('map_Kd material_0.png', f'map_Kd {texture_name}')
-    mtl_data = mtl_data.replace('Tr', 'd')
+    # Create MTL file with texture reference and illum 2 (Phong)
+    mtl_content = (
+        "newmtl material_0\n"
+        "Ka 1.000000 1.000000 1.000000\n"
+        "Kd 1.000000 1.000000 1.000000\n"
+        "Ks 0.000000 0.000000 0.000000\n"
+        "Ns 0.000000\n"
+        "illum 2\n"
+        f"map_Kd {texture_name}\n"
+    )
     with open(mtl_path, 'w') as f:
-        f.write(mtl_data)
+        f.write(mtl_content)
+
+    # Ensure OBJ references material.mtl
+    with open(obj_path, 'r') as f:
+        obj_data = f.read()
+    if 'mtllib' not in obj_data:
+        obj_data = 'mtllib material.mtl\n' + obj_data
+    else:
+        obj_data = obj_data.replace(
+            next(l for l in obj_data.splitlines() if l.startswith('mtllib')),
+            'mtllib material.mtl'
+        )
+    with open(obj_path, 'w') as f:
+        f.write(obj_data)
 
     return obj_path
