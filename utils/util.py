@@ -160,58 +160,70 @@ def ply2obj(project_path, dense_pc_path):
 
 
 def ply2obj_trimesh(project_path, dense_pc_path):
-    """Trimesh-based replacement for ply2obj — no meshlabserver dependency.
-    Creates material.mtl manually with dense_texture0.png and illum 2.
+    """Convert OpenMVS dense_texture.ply to OBJ with UV mapping.
+    Reads per-face texcoord from the PLY directly (trimesh drops these),
+    then writes a valid OBJ with vt entries and a material.mtl.
     """
-    import trimesh
+    from plyfile import PlyData
 
-    if not os.path.exists(os.path.join(project_path, 'model')):
-        os.makedirs(os.path.join(project_path, 'model'))
-
+    # Normalise path so basename never returns ''
+    project_path = os.path.normpath(project_path)
     project_name = os.path.basename(project_path)
     model_dir = os.path.join(project_path, 'model')
+    os.makedirs(model_dir, exist_ok=True)
+
     obj_path = os.path.join(model_dir, project_name + '.obj')
     mtl_path = os.path.join(model_dir, 'material.mtl')
     texture_name = 'dense_texture0.png'
 
     start = time.time()
-    mesh = trimesh.load(os.path.join(dense_pc_path, 'dense_texture.ply'))
-    mesh.export(obj_path)
-    log_step(project_path, 'ply2obj_trimesh', time.time() - start)
 
-    # Remove any auto-generated files from trimesh
-    for leftover in ['material.mtl', 'material_0.png']:
-        path = os.path.join(model_dir, leftover)
-        if os.path.exists(path):
-            os.remove(path)
+    ply = PlyData.read(os.path.join(dense_pc_path, 'dense_texture.ply'))
+    verts = ply['vertex']
+    faces = ply['face']
+
+    with open(obj_path, 'w') as f:
+        f.write('mtllib material.mtl\n')
+
+        # Vertices
+        for v in verts:
+            f.write(f"v {v['x']} {v['y']} {v['z']}\n")
+
+        # Per-face UV coordinates (OpenMVS stores 6 floats per tri: u0,v0,u1,v1,u2,v2)
+        vt_idx = 1
+        face_vt = []
+        for face in faces:
+            tc = face['texcoord']
+            tri = []
+            for i in range(3):
+                # Flip V axis for OBJ convention
+                f.write(f"vt {tc[i * 2]:.6f} {1.0 - tc[i * 2 + 1]:.6f}\n")
+                tri.append(vt_idx)
+                vt_idx += 1
+            face_vt.append(tri)
+
+        # Faces referencing vertex + UV indices (1-based)
+        f.write('usemtl material_0\n')
+        for i, face in enumerate(faces):
+            vi = face['vertex_indices']
+            vt = face_vt[i]
+            f.write(f"f {vi[0]+1}/{vt[0]} {vi[1]+1}/{vt[1]} {vi[2]+1}/{vt[2]}\n")
+
+    log_step(project_path, 'ply2obj', time.time() - start)
 
     # Copy original texture from dense output
     shutil.copy(os.path.join(dense_pc_path, texture_name), model_dir)
 
-    # Create MTL file with texture reference and illum 2 (Phong)
-    mtl_content = (
-        "newmtl material_0\n"
-        "Ka 1.000000 1.000000 1.000000\n"
-        "Kd 1.000000 1.000000 1.000000\n"
-        "Ks 0.000000 0.000000 0.000000\n"
-        "Ns 0.000000\n"
-        "illum 2\n"
-        f"map_Kd {texture_name}\n"
-    )
+    # Write MTL
     with open(mtl_path, 'w') as f:
-        f.write(mtl_content)
-
-    # Ensure OBJ references material.mtl
-    with open(obj_path, 'r') as f:
-        obj_data = f.read()
-    if 'mtllib' not in obj_data:
-        obj_data = 'mtllib material.mtl\n' + obj_data
-    else:
-        obj_data = obj_data.replace(
-            next(l for l in obj_data.splitlines() if l.startswith('mtllib')),
-            'mtllib material.mtl'
+        f.write(
+            "newmtl material_0\n"
+            "Ka 1.000000 1.000000 1.000000\n"
+            "Kd 1.000000 1.000000 1.000000\n"
+            "Ks 0.000000 0.000000 0.000000\n"
+            "Ns 0.000000\n"
+            "illum 2\n"
+            f"map_Kd {texture_name}\n"
         )
-    with open(obj_path, 'w') as f:
-        f.write(obj_data)
 
     return obj_path
