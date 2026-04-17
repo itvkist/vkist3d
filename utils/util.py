@@ -125,7 +125,7 @@ def texture_mesh(project_path, dense_pc_path):
         '-m', 'dense_mesh.ply',
         '--resolution-level', '1',
         '--empty-color', '0',
-        '--export-type', 'ply',
+        '--export-type', 'obj',
     ])
 
 
@@ -225,5 +225,61 @@ def ply2obj_trimesh(project_path, dense_pc_path):
             "illum 2\n"
             f"map_Kd {texture_name}\n"
         )
+
+    return obj_path
+
+
+def ply2obj_pymeshlab(project_path, dense_pc_path):
+    """Convert OpenMVS dense_texture.ply to OBJ using pymeshlab.
+    Preserves UV coordinates and texture mapping natively.
+    """
+    import pymeshlab
+
+    project_path = os.path.normpath(project_path)
+    project_name = os.path.basename(project_path)
+    model_dir = os.path.join(project_path, 'model')
+    os.makedirs(model_dir, exist_ok=True)
+
+    ply_path = os.path.join(dense_pc_path, 'dense_texture.ply')
+    obj_path = os.path.join(model_dir, project_name + '.obj')
+    mtl_path = os.path.join(model_dir, 'material.mtl')
+    texture_name = 'dense_texture0.png'
+
+    start = time.time()
+
+    ms = pymeshlab.MeshSet()
+    ms.load_new_mesh(ply_path)
+    ms.save_current_mesh(obj_path, save_wedge_texcoord=True)
+
+    log_step(project_path, 'ply2obj_pymeshlab', time.time() - start)
+
+    # pymeshlab writes <project_name>.mtl — rename to material.mtl
+    generated_mtl = obj_path.replace('.obj', '.mtl')
+    if os.path.exists(generated_mtl) and generated_mtl != mtl_path:
+        os.rename(generated_mtl, mtl_path)
+
+    # Update mtllib reference inside OBJ to point to material.mtl
+    with open(obj_path, 'r') as f:
+        obj_data = f.read()
+    obj_data = obj_data.replace(
+        f'mtllib {project_name}.mtl', 'mtllib material.mtl'
+    )
+    with open(obj_path, 'w') as f:
+        f.write(obj_data)
+
+    # Copy original texture from dense output
+    shutil.copy(os.path.join(dense_pc_path, texture_name), model_dir)
+
+    # Fix MTL: point texture at dense_texture0.png, add illum 2, fix Tr -> d
+    with open(mtl_path, 'r') as f:
+        mtl_data = f.read()
+    # Replace whatever texture pymeshlab wrote with the correct filename
+    import re
+    mtl_data = re.sub(r'map_Kd\s+\S+', f'map_Kd {texture_name}', mtl_data)
+    mtl_data = mtl_data.replace('Tr', 'd')
+    if 'illum' not in mtl_data:
+        mtl_data = mtl_data.replace('map_Kd', 'illum 2\nmap_Kd')
+    with open(mtl_path, 'w') as f:
+        f.write(mtl_data)
 
     return obj_path

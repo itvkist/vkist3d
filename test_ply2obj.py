@@ -1,8 +1,8 @@
 """
-Test for ply2obj_trimesh.
+Test for ply2obj conversion functions.
 
 Usage:
-    python test_ply2obj.py <project_path>
+    python test_ply2obj.py <project_path> [trimesh|pymeshlab|both]
 
     <project_path> must be a completed reconstruction folder containing:
         dense/0/dense_texture.ply
@@ -10,19 +10,20 @@ Usage:
 
 Expected output in <project_path>/model/:
     <project_name>.obj
-    material.mtl          (map_Kd references dense_texture0.png)
+    material.mtl          (map_Kd references dense_texture0.png, illum 2)
     dense_texture0.png
 """
 
 import os
+import shutil
 import sys
 import time
+import traceback
 
-from utils.util import ply2obj_trimesh
+from utils.util import ply2obj_trimesh, ply2obj_pymeshlab
 
 
 def check_outputs(project_path, obj_path):
-    project_name = os.path.basename(project_path)
     model_dir = os.path.join(project_path, 'model')
 
     expected = {
@@ -46,34 +47,61 @@ def check_outputs(project_path, obj_path):
     if os.path.exists(mtl_path):
         with open(mtl_path) as f:
             mtl_data = f.read()
-        checks = {
-            'map_Kd dense_texture0.png': 'texture reference',
-            'illum 2':                   'illumination model 2',
-        }
-        for token, label in checks.items():
+        for token, label in [
+            ('map_Kd dense_texture0.png', 'texture reference'),
+            ('illum 2',                   'illumination model 2'),
+        ]:
             if token in mtl_data:
                 print(f"    OK       MTL {label}")
             else:
                 print(f"    MISSING  MTL {label} ({token!r} not found)")
                 all_ok = False
 
-    # Warn if trimesh's auto-texture was not cleaned up
-    for leftover in ['material_0.png', 'material.mtl']:
-        path = os.path.join(model_dir, leftover)
-        # material.mtl is expected — only warn about material_0.png
-        if leftover != 'material.mtl' and os.path.exists(path):
-            print(f"    WARN     Leftover trimesh file not removed: {path}")
+    # Check OBJ has UV coordinates
+    if os.path.exists(obj_path):
+        with open(obj_path) as f:
+            obj_data = f.read()
+        has_vt = '\nvt ' in obj_data or obj_data.startswith('vt ')
+        if has_vt:
+            vt_count = obj_data.count('\nvt ')
+            print(f"    OK       OBJ has UV coordinates ({vt_count} vt entries)")
+        else:
+            print("    MISSING  OBJ has no vt (UV) entries — texture will not map")
+            all_ok = False
 
     return all_ok
 
 
+def run(label, fn, project_path, dense_pc_path):
+    # Clean model dir before each run for a fair test
+    model_dir = os.path.join(project_path, 'model')
+    if os.path.exists(model_dir):
+        shutil.rmtree(model_dir)
+
+    print(f"\n{'='*60}")
+    print(f"Running: {label}")
+    print(f"{'='*60}")
+    start = time.time()
+    try:
+        result = fn(project_path, dense_pc_path)
+        elapsed = time.time() - start
+        print(f"  Returned : {result}")
+        print(f"  Time     : {elapsed:.2f}s")
+        check_outputs(project_path, result)
+    except Exception as e:
+        elapsed = time.time() - start
+        print(f"  FAILED after {elapsed:.2f}s: {e}")
+        traceback.print_exc()
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: python test_ply2obj.py <project_path>")
-        print("Example: python test_ply2obj.py projects/1717735836742")
+        print("Usage: python test_ply2obj.py <project_path> [trimesh|pymeshlab|both]")
+        print("Example: python test_ply2obj.py projects/1717735836742 pymeshlab")
         sys.exit(1)
 
     project_path = sys.argv[1]
+    mode = sys.argv[2] if len(sys.argv) > 2 else 'both'
     dense_pc_path = os.path.join(project_path, 'dense/0')
 
     for required in ['dense_texture.ply', 'dense_texture0.png']:
@@ -85,19 +113,10 @@ if __name__ == '__main__':
 
     print(f"Project path : {project_path}")
     print(f"Dense path   : {dense_pc_path}")
+    print(f"Mode         : {mode}")
 
-    print(f"\n{'='*60}")
-    print("Running: ply2obj_trimesh")
-    print(f"{'='*60}")
-    start = time.time()
-    try:
-        result = ply2obj_trimesh(project_path, dense_pc_path)
-        elapsed = time.time() - start
-        print(f"  Returned : {result}")
-        print(f"  Time     : {elapsed:.2f}s")
-        check_outputs(project_path, result)
-    except Exception as e:
-        import traceback
-        elapsed = time.time() - start
-        print(f"  FAILED after {elapsed:.2f}s: {e}")
-        traceback.print_exc()
+    if mode in ('trimesh', 'both'):
+        run('ply2obj_trimesh', ply2obj_trimesh, project_path, dense_pc_path)
+
+    if mode in ('pymeshlab', 'both'):
+        run('ply2obj_pymeshlab', ply2obj_pymeshlab, project_path, dense_pc_path)
