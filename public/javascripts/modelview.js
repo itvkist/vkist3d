@@ -58,25 +58,42 @@ var textureLoader = new THREE.TextureLoader();
 
 var objLoader = new THREE.OBJLoader();
 var mtlLoader = new THREE.MTLLoader();
+var gltfLoader = new THREE.GLTFLoader();
 var vkist;
 
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Lấy tham số file từ URL hiện tại
-    var urlParams = new URLSearchParams(window.location.search);
-    var fileParam = urlParams.get('file');
-
-    // Load file .mtl tương ứng
-    console.log('../models/' + fileParam + '/' + fileParam + '.obj')
-    mtlLoader.load('../models/' + fileParam + '/material.mtl', function(materials) {
+function loadOBJ(modelDir, fileName) {
+    mtlLoader.setPath(modelDir + '/');
+    mtlLoader.load('material.mtl', function(materials) {
         materials.preload();
         objLoader.setMaterials(materials);
-        // Load file .obj tương ứng
-        objLoader.load('../models/' + fileParam + '/' + fileParam + '.obj', function(object) {
+        objLoader.load(modelDir + '/' + fileName + '.obj', function(object) {
             scene.add(object);
             vkist = object;
         });
     });
+}
+
+function loadGLB(glbPath) {
+    gltfLoader.load(glbPath, function(gltf) {
+        scene.add(gltf.scene);
+        vkist = gltf.scene;
+    }, undefined, function(err) {
+        console.error('GLB load error:', err);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var fileParam = urlParams.get('file');
+    var type      = urlParams.get('type');
+    var modelDir  = '../models/' + fileParam;
+
+    if (type === 'glb') {
+        loadGLB(modelDir + '/' + fileParam + '.glb');
+    } else {
+        loadOBJ(modelDir, fileParam);
+    }
 });
 
 
