@@ -53,6 +53,7 @@ def generate_texture(project_path):
     public_model_dir = os.path.join(PUBLIC_MODELS_DIR, project_id)
     if os.path.exists(public_model_dir):
         shutil.rmtree(public_model_dir)
+    os.makedirs(PUBLIC_MODELS_DIR, exist_ok=True)
     shutil.copytree(os.path.join(project_path, 'model'), public_model_dir)
     log_step(project_path, 'copy model to public', 0)
 
