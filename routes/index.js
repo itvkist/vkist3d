@@ -23,7 +23,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.post('/upload', upload.array('files[]'), function(req, res, next) {
-  const projectId = Date.now().toString();
+  const now = new Date();
+  const projectId = now.toISOString().replace('T', '_').replace(/:/g, '-').slice(0, 19);
   const projectPath = path.join(PROJECTS_DIR, projectId);
   const imagesFolderPath = path.join(projectPath, 'images');
 
